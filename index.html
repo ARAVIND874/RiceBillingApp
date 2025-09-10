@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>பாரம்பரிய அரிசி பில்லிங் (Traditional Rice Billing)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #a7f3d0, #f0abfc, #a5b4fc);
+            background-size: 400% 400%;
+            animation: gradient-animation 15s ease infinite;
+        }
+
+        @keyframes gradient-animation {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Custom print-specific styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #receipt-section,
+            #receipt-section * {
+                visibility: visible;
+            }
+
+            #receipt-section {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                box-shadow: none;
+                border: none;
+                padding: 20px;
+                margin-top: 0;
+                border-radius: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="flex flex-col items-center justify-center p-4">
+    <!-- Main Container -->
+    <div class="max-w-4xl w-full bg-white rounded-xl shadow-lg p-6 md:p-10 my-8">
+        <!-- Header Section with Bill Icon -->
+        <header class="flex items-center justify-center mb-8 border-b-2 pb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-emerald-600 mr-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m0 0-3-3m3 3 3-3M3.375 7.5h16.5a2.25 2.25 0 0 1 2.25 2.25v7.5a2.25 2.25 0 0 1-2.25 2.25h-16.5a2.25 2.25 0 0 1-2.25-2.25v-7.5a2.25 2.25 0 0 1 2.25-2.25Z" />
+            </svg>
+            <h1 class="text-3xl md:text-4xl font-bold text-emerald-700">பாரம்பரிய அரிசி பில்லிங்</h1>
+        </header>
+
+        <!-- User ID Display (for debug and collaboration) -->
+        <div id="userIdDisplay" class="bg-gray-200 p-3 rounded-lg text-sm text-gray-700 break-words mb-6 hidden">
+            <span class="font-semibold">User ID:</span> <span id="userIdValue"></span>
+        </div>
+        
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="text-center text-gray-500 font-medium hidden">Loading...</div>
+
+        <!-- Rice Selection Section -->
+        <section id="rice-list-section">
+            <h2 class="text-2xl font-semibold mb-6 text-center text-gray-800">அரிசி வகைகளைத் தேர்ந்தெடுக்கவும் (Select a Rice Variety)</h2>
+            <div id="rice-cards" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Rice cards will be dynamically inserted here by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Billing Section (Initially Hidden) -->
+        <section id="billing-section" class="hidden mt-8">
+            <button id="back-to-list-btn" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-medium mb-4 hover:bg-gray-300 transition-colors">
+                &larr; அரிசி வகைகளுக்குத் திரும்பு (Back to Rice List)
+            </button>
+            <div class="border-2 border-dashed border-emerald-300 p-6 rounded-lg text-center">
+                <h2 class="text-2xl font-semibold mb-4" id="billing-title"></h2>
+                <div class="flex items-center justify-center mb-4">
+                    <img id="billing-image" class="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-emerald-400 shadow-md" alt="Rice Image">
+                </div>
+                <div class="mb-4">
+                    <label for="price-edit-input" class="block text-xl md:text-2xl font-semibold text-gray-700 mb-2">ஒரு கிலோ விலை (Price per kg):</label>
+                    <div class="flex items-center justify-center">
+                        <span class="p-3 bg-gray-200 rounded-l-lg font-semibold text-gray-600">₹</span>
+                        <input type="number" id="price-edit-input" min="0" step="1" class="w-32 md:w-40 p-3 text-center rounded-r-lg border-t border-b border-r border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="weight-input" class="block text-xl md:text-2xl font-semibold text-gray-700 mb-2">எடை (Weight):</label>
+                    <div class="flex items-center justify-center">
+                        <input type="number" id="weight-input" min="0.25" max="25" step="0.25" placeholder="0.25 - 25" class="w-32 md:w-40 p-3 text-center rounded-l-lg border-t border-b border-l border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                        <select id="weight-unit-select" class="p-3 bg-gray-200 rounded-r-lg font-semibold text-gray-600 border-t border-b border-r border-gray-300">
+                            <option value="kg">kg</option>
+                            <option value="gram">gram</option>
+                        </select>
+                    </div>
+                </div>
+                <p id="price-display" class="text-2xl font-bold text-emerald-600 mb-4">மொத்த விலை: ₹0.00</p>
+                <button id="add-to-cart-btn" class="bg-emerald-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:bg-emerald-700 transition-colors transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                    வண்டியில் சேர் (Add to Cart)
+                </button>
+                <p id="error-message" class="text-red-500 mt-4 font-medium"></p>
+            </div>
+        </section>
+
+        <!-- Cart Section (Initially Hidden) -->
+        <section id="cart-section" class="hidden mt-8">
+            <h2 class="text-2xl font-semibold mb-4 text-center text-gray-800">வண்டி (Cart)</h2>
+            <div id="cart-items-list" class="space-y-4 mb-4">
+                <!-- Cart items will be dynamically inserted here -->
+            </div>
+            <div id="cart-summary" class="text-right font-bold text-2xl text-gray-800 border-t-2 pt-4">
+                மொத்தத் தொகை (Grand Total): <span id="cart-total">₹0.00</span>
+            </div>
+            <div class="flex flex-col sm:flex-row justify-center mt-6 space-y-4 sm:space-y-0 sm:space-x-4">
+                <button id="generate-bill-btn" class="bg-emerald-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:bg-emerald-700 transition-colors transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                    பில் ரசீது உருவாக்கு (Generate Bill)
+                </button>
+                <button id="clear-cart-btn" class="bg-red-500 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:bg-red-600 transition-colors transform hover:scale-105">
+                    வண்டியை அகற்று (Clear Cart)
+                </button>
+                <button id="go-to-rice-list-from-cart" class="bg-gray-200 text-gray-700 py-3 px-6 rounded-full shadow-lg hover:bg-gray-300 transition-colors transform hover:scale-105">
+                    அரிசி வகைகளுக்குத் திரும்பு (Back to Rice List)
+                </button>
+            </div>
+        </section>
+
+        <!-- Receipt Section (Initially Hidden) -->
+        <section id="receipt-section" class="hidden mt-8 border-4 border-emerald-500 p-6 md:p-8 rounded-lg shadow-xl">
+            <h2 class="text-center text-3xl font-bold text-emerald-800 mb-6">பில் ரசீது (Bill Receipt)</h2>
+            <div id="receipt-content" class="text-lg text-gray-800">
+                <!-- Receipt details will be dynamically inserted here -->
+            </div>
+            <div class="flex justify-center mt-8 space-x-4 no-print">
+                <button id="print-receipt-btn" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-colors transform hover:scale-105">
+                    பில் ரசீது அச்சிடு (Print Receipt)
+                </button>
+                <button id="new-bill-btn" class="bg-yellow-500 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:bg-yellow-600 transition-colors transform hover:scale-105">
+                    புதிய பில் (New Bill)
+                </button>
+            </div>
+        </section>
+
+        <!-- Bill History Section -->
+        <section id="bill-history-section" class="mt-8">
+            <h2 class="text-2xl font-semibold mb-4 text-center text-gray-800">பில் வரலாறு (Bill History)</h2>
+            <div id="bill-history-list" class="space-y-4">
+                <!-- Bill history items will be dynamically inserted here -->
+            </div>
+        </section>
+    </div>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-auto">
+            <p id="modal-message" class="text-center mb-4"></p>
+            <div class="flex justify-center space-x-4">
+                <button id="modal-ok-btn" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Section -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase global variables
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Firebase variables
+        let db;
+        let auth;
+        let userId = null;
+        let billsCollectionRef;
+
+        // Rice varieties and their default prices (per kg)
+        const riceVarieties = [{
+            tamil: "மாப்பிள்ளை சம்பா",
+            english: "Mapillai Samba",
+            price: 120
+        }, {
+            tamil: "கருப்பு கவுணி",
+            english: "Karuppu Kavuni",
+            price: 180
+        }, {
+            tamil: "சிவப்பு கவுணி",
+            english: "Sivappu Kavuni",
+            price: 150
+        }, {
+            tamil: "தூயமல்லி",
+            english: "Thooyamalli",
+            price: 110
+        }, {
+            tamil: "குள்ளக்கார்",
+            english: "Kullakar",
+            price: 135
+        }, {
+            tamil: "புங்கார்",
+            english: "Poongar",
+            price: 140
+        }, {
+            tamil: "இலுப்பைப்பூ சம்பா",
+            english: "Iluppai Poo Samba",
+            price: 165
+        }, {
+            tamil: "காட்டுயானம்",
+            english: "Kattuyanam",
+            price: 175
+        }, {
+            tamil: "மொட்டைக்கருப்பன்",
+            english: "Mottaikaruppan",
+            price: 125
+        }, {
+            tamil: "சித்திரைக்கர்",
+            english: "Chithiraikar",
+            price: 130
+        }, {
+            tamil: "வடன் சம்பா",
+            english: "Vadan Samba",
+            price: 115
+        }, {
+            tamil: "நீலம் சம்பா",
+            english: "Neelam Samba",
+            price: 145
+        }];
+
+        // Get DOM elements
+        const riceCardsContainer = document.getElementById('rice-cards');
+        const riceListSection = document.getElementById('rice-list-section');
+        const billingSection = document.getElementById('billing-section');
+        const cartSection = document.getElementById('cart-section');
+        const receiptSection = document.getElementById('receipt-section');
+        const billingTitle = document.getElementById('billing-title');
+        const billingImage = document.getElementById('billing-image');
+        const priceEditInput = document.getElementById('price-edit-input');
+        const weightInput = document.getElementById('weight-input');
+        const weightUnitSelect = document.getElementById('weight-unit-select');
+        const priceDisplay = document.getElementById('price-display');
+        const addToCartBtn = document.getElementById('add-to-cart-btn');
+        const backToListBtn = document.getElementById('back-to-list-btn');
+        const errorMessage = document.getElementById('error-message');
+        const cartItemsList = document.getElementById('cart-items-list');
+        const cartTotalDisplay = document.getElementById('cart-total');
+        const generateBillBtn = document.getElementById('generate-bill-btn');
+        const clearCartBtn = document.getElementById('clear-cart-btn');
+        const goToRiceListFromCartBtn = document.getElementById('go-to-rice-list-from-cart');
+        const receiptContent = document.getElementById('receipt-content');
+        const printReceiptBtn = document.getElementById('print-receipt-btn');
+        const newBillBtn = document.getElementById('new-bill-btn');
+        const billHistoryList = document.getElementById('bill-history-list');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const userIdValue = document.getElementById('userIdValue');
+        const loadingIndicator = document.getElementById('loading-indicator');
+
+        // Custom Modal Elements
+        const customModal = document.getElementById('custom-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const modalOkBtn = document.getElementById('modal-ok-btn');
+
+        // State variables
+        let selectedRice = null;
+        let cart = [];
+
+        // --- Firebase Functions ---
+        function initializeFirebase() {
+            loadingIndicator.classList.remove('hidden');
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setLogLevel('debug');
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userIdDisplay.classList.remove('hidden');
+                        userIdValue.textContent = userId;
+                        billsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/bills`);
+                        listenForBillHistory();
+                    } else {
+                        // Sign in with the provided token or anonymously
+                        if (initialAuthToken) {
+                            try {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } catch (e) {
+                                console.error("Error signing in with custom token:", e);
+                                await signInAnonymously(auth);
+                            }
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    }
+                    loadingIndicator.classList.add('hidden');
+                });
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                showCustomModal("Firebase initialization failed. Check your configuration.");
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        async function saveBillToHistory(billData) {
+            if (!userId) {
+                console.error("User not authenticated. Cannot save bill history.");
+                return;
+            }
+            try {
+                await addDoc(billsCollectionRef, {
+                    ...billData,
+                    timestamp: new Date()
+                });
+                console.log("Bill saved to history successfully.");
+            } catch (e) {
+                console.error("Error saving bill history: ", e);
+                showCustomModal("Error saving bill history. Please try again.");
+            }
+        }
+
+        function listenForBillHistory() {
+            if (!billsCollectionRef) return;
+            // Use a basic query without orderBy to avoid index errors
+            const q = query(billsCollectionRef);
+
+            onSnapshot(q, (snapshot) => {
+                let bills = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const timestamp = data.timestamp ? data.timestamp.toDate() : new Date();
+                    bills.push({ id: doc.id, ...data, timestamp });
+                });
+                
+                // Sort bills by timestamp in memory to ensure history is ordered
+                bills.sort((a, b) => b.timestamp - a.timestamp);
+                renderBillHistory(bills);
+            }, (error) => {
+                console.error("Error listening to bill history:", error);
+                showCustomModal("Error fetching bill history. Please reload the page.");
+            });
+        }
+
+        function renderBillHistory(bills) {
+            billHistoryList.innerHTML = '';
+            if (bills.length === 0) {
+                billHistoryList.innerHTML = '<p class="text-center text-gray-500">பில் வரலாறு எதுவும் இல்லை. (No bill history found.)</p>';
+                return;
+            }
+
+            bills.forEach(bill => {
+                const billItem = document.createElement('div');
+                const total = bill.grandTotal || 0;
+                const date = bill.timestamp ? bill.timestamp.toLocaleDateString('ta-IN') : 'N/A';
+                billItem.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg shadow-sm';
+                billItem.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-gray-800">தேதி (Date): <span class="text-gray-600">${date}</span></p>
+                        <p class="font-semibold text-gray-800">மொத்த தொகை (Total Amount): <span class="text-emerald-600">₹${total.toFixed(2)}</span></p>
+                    </div>
+                `;
+                billHistoryList.appendChild(billItem);
+            });
+        }
+
+        // --- UI and Logic Functions ---
+        function showCustomModal(message) {
+            modalMessage.textContent = message;
+            customModal.classList.remove('hidden');
+        }
+
+        modalOkBtn.addEventListener('click', () => {
+            customModal.classList.add('hidden');
+        });
+
+        function renderRiceCards() {
+            riceCardsContainer.innerHTML = '';
+            riceVarieties.forEach(rice => {
+                const card = document.createElement('div');
+                card.classList.add('flex', 'flex-col', 'items-center', 'justify-center', 'p-4', 'bg-white', 'rounded-lg', 'shadow-md', 'hover:shadow-xl', 'transition-shadow', 'duration-300', 'cursor-pointer', 'transform', 'hover:scale-105');
+                card.innerHTML = `
+                    <img src="https://placehold.co/150x150/f9f9f9/4b5563?text=${encodeURIComponent(rice.tamil)}" alt="${rice.tamil} Rice" class="w-24 h-24 mb-3 rounded-full object-cover border-2 border-emerald-300">
+                    <h3 class="text-center font-bold text-lg text-gray-800">${rice.tamil}</h3>
+                    <p class="text-center text-sm text-gray-500">${rice.english}</p>
+                `;
+                card.addEventListener('click', () => {
+                    handleRiceSelection(rice);
+                });
+                riceCardsContainer.appendChild(card);
+            });
+        }
+
+        function handleRiceSelection(rice) {
+            selectedRice = rice;
+            riceListSection.classList.add('hidden');
+            billingSection.classList.remove('hidden');
+
+            billingTitle.textContent = `${rice.tamil} (${rice.english})`;
+            billingImage.src = `https://placehold.co/150x150/f9f9f9/4b5563?text=${encodeURIComponent(rice.tamil)}`;
+            priceEditInput.value = rice.price;
+            weightInput.value = '';
+            priceDisplay.textContent = 'மொத்த விலை: ₹0.00';
+            errorMessage.textContent = '';
+            addToCartBtn.disabled = true;
+        }
+
+        function calculatePrice() {
+            let weight = parseFloat(weightInput.value);
+            const unitPrice = parseFloat(priceEditInput.value);
+            const unit = weightUnitSelect.value;
+
+            if (unit === 'gram') {
+                if (weight < 0 || weight > 25000) {
+                    errorMessage.textContent = 'எடை 0 முதல் 25000 கிராம் வரை இருக்க வேண்டும். (Weight must be between 0g and 25000g)';
+                    priceDisplay.textContent = 'மொத்த விலை: ₹0.00';
+                    addToCartBtn.disabled = true;
+                    return;
+                }
+                weight = weight / 1000; // Convert to kg
+            } else { // kg
+                if (weight < 0 || weight > 25) {
+                    errorMessage.textContent = 'எடை 0 முதல் 25 கிலோ வரை இருக்க வேண்டும். (Weight must be between 0kg and 25kg)';
+                    priceDisplay.textContent = 'மொத்த விலை: ₹0.00';
+                    addToCartBtn.disabled = true;
+                    return;
+                }
+            }
+            
+            if (isNaN(weight) || isNaN(unitPrice) || unitPrice <= 0) {
+                priceDisplay.textContent = 'மொத்த விலை: ₹0.00';
+                addToCartBtn.disabled = true;
+            } else {
+                const totalPrice = weight * unitPrice;
+                priceDisplay.textContent = `மொத்த விலை (Total Price): ₹${totalPrice.toFixed(2)}`;
+                errorMessage.textContent = '';
+                addToCartBtn.disabled = false;
+            }
+        }
+
+        function renderCart() {
+            cartItemsList.innerHTML = '';
+            let grandTotal = 0;
+            if (cart.length === 0) {
+                cartItemsList.innerHTML = '<p class="text-center text-gray-500">வண்டி காலியாக உள்ளது. (Cart is empty.)</p>';
+                generateBillBtn.disabled = true;
+            } else {
+                generateBillBtn.disabled = false;
+                cart.forEach((item, index) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.classList.add('bg-gray-50', 'p-4', 'rounded-lg', 'flex', 'justify-between', 'items-center', 'shadow-sm');
+                    const weightText = item.weightUnit === 'gram' ? `${item.weightInGrams} g` : `${item.weightInKg} kg`;
+                    itemDiv.innerHTML = `
+                        <div>
+                            <p class="font-semibold text-gray-800">${item.rice.tamil} <span class="text-sm text-gray-500">(${item.rice.english})</span></p>
+                            <p class="text-sm text-gray-600">${weightText} @ ₹${item.price.toFixed(2)}/kg</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <p class="font-bold text-emerald-600">₹${item.totalPrice.toFixed(2)}</p>
+                            <button data-index="${index}" class="remove-from-cart-btn bg-red-200 text-red-700 w-8 h-8 rounded-full hover:bg-red-300 transition-colors">
+                                &times;
+                            </button>
+                        </div>
+                    `;
+                    cartItemsList.appendChild(itemDiv);
+                    grandTotal += item.totalPrice;
+                });
+            }
+            cartTotalDisplay.textContent = `₹${grandTotal.toFixed(2)}`;
+        }
+
+        // --- Event Listeners ---
+        priceEditInput.addEventListener('input', calculatePrice);
+        weightInput.addEventListener('input', calculatePrice);
+        weightUnitSelect.addEventListener('change', () => {
+            const unit = weightUnitSelect.value;
+            if (unit === 'kg') {
+                weightInput.placeholder = '0.25 - 25';
+                weightInput.min = '0.25';
+                weightInput.max = '25';
+                weightInput.step = '0.25';
+                weightInput.value = '';
+            } else {
+                weightInput.placeholder = '250 - 25000';
+                weightInput.min = '250';
+                weightInput.max = '25000';
+                weightInput.step = '250';
+                weightInput.value = '';
+            }
+            calculatePrice();
+        });
+
+        addToCartBtn.addEventListener('click', () => {
+            const unitPrice = parseFloat(priceEditInput.value);
+            const weightInputVal = parseFloat(weightInput.value);
+            const weightUnit = weightUnitSelect.value;
+            let weightInKg = weightUnit === 'kg' ? weightInputVal : weightInputVal / 1000;
+            let totalPrice = weightInKg * unitPrice;
+
+            if (isNaN(totalPrice) || totalPrice <= 0) {
+                showCustomModal('செல்லுபடியாகும் எடையை உள்ளிடவும். (Please enter a valid weight)');
+                return;
+            }
+
+            cart.push({
+                rice: selectedRice,
+                price: unitPrice,
+                weightInKg: weightInKg,
+                weightInGrams: weightUnit === 'gram' ? weightInputVal : weightInKg * 1000,
+                weightUnit: weightUnit,
+                totalPrice: totalPrice
+            });
+
+            // Switch to cart section
+            billingSection.classList.add('hidden');
+            cartSection.classList.remove('hidden');
+            renderCart();
+        });
+
+        cartItemsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-from-cart-btn')) {
+                const index = e.target.getAttribute('data-index');
+                cart.splice(index, 1);
+                renderCart();
+                if (cart.length === 0) {
+                    cartSection.classList.add('hidden');
+                    riceListSection.classList.remove('hidden');
+                }
+            }
+        });
+
+        generateBillBtn.addEventListener('click', () => {
+            if (cart.length === 0) {
+                return;
+            }
+
+            // Generate receipt content
+            const now = new Date();
+            let itemsHTML = '';
+            let grandTotal = 0;
+            cart.forEach(item => {
+                itemsHTML += `
+                    <tr>
+                        <td class="p-2">${item.rice.tamil} <br> <span class="text-sm text-gray-500">(${item.rice.english})</span></td>
+                        <td class="p-2 text-right">${item.weightUnit === 'gram' ? item.weightInGrams + ' g' : item.weightInKg + ' kg'}</td>
+                        <td class="p-2 text-right">₹${item.price.toFixed(2)} / kg</td>
+                        <td class="p-2 text-right">₹${item.totalPrice.toFixed(2)}</td>
+                    </tr>
+                `;
+                grandTotal += item.totalPrice;
+            });
+
+            const receiptHTML = `
+                <p><strong>பில் தேதி (Bill Date):</strong> ${now.toLocaleDateString('ta-IN')}</p>
+                <p><strong>பில் நேரம் (Bill Time):</strong> ${now.toLocaleTimeString('ta-IN')}</p>
+                <hr class="my-4 border-gray-300">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="p-2">அரிசி வகை (Rice Type)</th>
+                            <th class="p-2 text-right">எடை (Weight)</th>
+                            <th class="p-2 text-right">விலை (Price)</th>
+                            <th class="p-2 text-right">மொத்த விலை (Total)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHTML}
+                    </tbody>
+                </table>
+                <hr class="my-4 border-gray-300">
+                <div class="flex justify-end font-bold text-xl text-emerald-700">
+                    <p>மொத்தத் தொகை (Grand Total): ₹${grandTotal.toFixed(2)}</p>
+                </div>
+                <p class="text-center mt-6 text-sm text-gray-500">நன்றி! மீண்டும் வருக! (Thank you! Visit again!)</p>
+            `;
+            receiptContent.innerHTML = receiptHTML;
+
+            // Save bill to history
+            saveBillToHistory({
+                items: JSON.stringify(cart),
+                grandTotal: grandTotal
+            });
+
+            // Show receipt section and hide others
+            cartSection.classList.add('hidden');
+            receiptSection.classList.remove('hidden');
+        });
+
+        backToListBtn.addEventListener('click', () => {
+            billingSection.classList.add('hidden');
+            riceListSection.classList.remove('hidden');
+            if (cart.length > 0) {
+                cartSection.classList.remove('hidden');
+            }
+        });
+
+        goToRiceListFromCartBtn.addEventListener('click', () => {
+            cartSection.classList.add('hidden');
+            riceListSection.classList.remove('hidden');
+        });
+
+        clearCartBtn.addEventListener('click', () => {
+            cart = [];
+            renderCart();
+            cartSection.classList.add('hidden');
+            riceListSection.classList.remove('hidden');
+        });
+
+        printReceiptBtn.addEventListener('click', () => {
+            window.print();
+        });
+
+        newBillBtn.addEventListener('click', () => {
+            cart = [];
+            receiptSection.classList.add('hidden');
+            riceListSection.classList.remove('hidden');
+            renderCart();
+        });
+
+        // Initialize the app on page load
+        window.onload = () => {
+            initializeFirebase();
+            renderRiceCards();
+        };
+    </script>
+</body>
+</html>
